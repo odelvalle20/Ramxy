@@ -1,5 +1,11 @@
 # LAB RANSOMWARE V4 DEMO
 
+[![Tests](https://github.com/odelvalle20/Ramxy/actions/workflows/tests.yml/badge.svg)](https://github.com/odelvalle20/Ramxy/actions/workflows/tests.yml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+> Laboratorio defensivo para estudiar coordinación remota, cifrado reversible, telemetría y recuperación en una red aislada.
+
 Laboratorio educativo de **cifrado y recuperación remota controlada**. Reproduce la guía V4 en una red privada con tres equipos o máquinas virtuales:
 
 | Equipo | Función | Dirección de referencia |
@@ -16,6 +22,16 @@ Laboratorio educativo de **cifrado y recuperación remota controlada**. Reproduc
 PC2/PC3 -> /registro -> PC1
 PC1 controlador -> /ordenar {CIFRAR_DEMO|RECUPERAR_DEMO} -> cola
 PC2/PC3 -> /poll -> cifrado/descifrado Fernet local -> /resultado -> PC1
+```
+
+```mermaid
+flowchart LR
+	A[PC2 / PC3<br/>Agente] -->|POST /registro| S[PC1<br/>Servidor Flask]
+	C[PC1<br/>Controlador] -->|POST /ordenar| S
+	S -->|POST /poll| A
+	A -->|Fernet local| F[3 TXT ficticios<br/>o 3 archivos .enc]
+	A -->|POST /resultado| S
+	S -->|GET /estado| C
 ```
 
 El servidor nunca recibe shell, PowerShell, código Python ni una ruta de archivos. Solo admite dos literales: `CIFRAR_DEMO` y `RECUPERAR_DEMO`.
@@ -67,3 +83,12 @@ La suite prueba el round-trip de cifrado/recuperación, la clave incorrecta, el 
 ## Ejecución de la demo
 
 Consulta [docs/runbook.md](docs/runbook.md) para la configuración de las tres VMs, firewall privado, servidor, controlador, agentes y PyInstaller. Las decisiones técnicas y los límites están en [docs/architecture.md](docs/architecture.md) y [docs/security.md](docs/security.md).
+
+## Participar
+
+Las propuestas defensivas son bienvenidas: mejoras de observabilidad, pruebas, documentación de VirtualBox/VMware y detecciones con Sysmon o SIEM. Consulta [CONTRIBUTING.md](CONTRIBUTING.md) antes de abrir un pull request. Para errores usa las [Issues](https://github.com/odelvalle20/Ramxy/issues).
+
+## Idiomas
+
+- Español: este README.
+- English: [README.en.md](README.en.md).
