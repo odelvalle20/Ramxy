@@ -1,109 +1,69 @@
-# Laboratorio remoto controlado
+# LAB RANSOMWARE V4 DEMO
 
-Implementación reproducible del laboratorio descrito en `Guia_Laboratorio v3.pdf`.
+Laboratorio educativo de **cifrado y recuperación remota controlada**. Reproduce la guía V4 en una red privada con tres equipos o máquinas virtuales:
 
-El proyecto demuestra un flujo de *tasking* remoto acotado:
+| Equipo | Función | Dirección de referencia |
+| --- | --- | --- |
+| PC1 | Servidor Flask + controlador | `192.168.100.10` |
+| PC2 | Agente | `192.168.100.20` |
+| PC3 | Agente | `192.168.100.30` |
 
-```text
-agente -> registro -> polling -> orden permitida -> operación local -> telemetría
-```
+> **Advertencia:** V4 cifra realmente, pero solo tres archivos ficticios con nombres exactos dentro de `C:\LAB_RANSOMWARE\Datos`. No lo ejecutes contra datos personales, unidades de red, carpetas compartidas ni equipos no autorizados.
 
-La simulación **no cifra archivos**, no ejecuta comandos remotos y no accede a carpetas personales. Solo renombra archivos ficticios dentro del directorio de laboratorio y luego restaura sus nombres.
-
-## Qué hace exactamente
-
-La repo representa tres papeles: un servidor, un controlador y uno o más agentes. En esta primera versión el servidor y las operaciones locales están implementados y probados; el flujo se ejecuta en `127.0.0.1` para que pueda validarse en una sola máquina.
-
-1. El agente se identifica con un ID como `LAB-A1B2C3` y se registra en `/registro`.
-2. El servidor guarda el ID, hostname, IP, estado, hora de conexión y último resultado en `victimas.json`.
-3. El controlador solicita una orden para ese ID. Solo se aceptan `SIMULAR` y `RECUPERAR`.
-4. La orden queda en una cola en memoria hasta que el agente consulta `/poll`.
-5. El agente ejecuta la operación local dentro de la carpeta `Datos` y comunica el resultado en `/resultado`.
-
-### ¿Encripta los archivos?
-
-**No.** El nombre del laboratorio alude a una simulación de ransomware, pero este código no implementa cifrado. `SIMULAR` hace solamente esto:
-
-- busca archivos dentro de `Datos`;
-- cambia `documento1.txt` por `documento1.txt.simulado`;
-- crea `SIMULACION_RANSOMWARE.txt` como marcador visible;
-- informa cuántos archivos fueron renombrados.
-
-El contenido de cada archivo permanece igual. No se usa una clave, algoritmo criptográfico ni extensión de cifrado. La operación no borra datos y no puede apuntar a Documentos, Escritorio, perfiles o unidades de red mediante el flujo documentado.
-
-### ¿Cómo se recuperan?
-
-`RECUPERAR` recorre únicamente los archivos que terminan en `.simulado`. Para cada uno, quita ese sufijo si el nombre original todavía no existe. Después elimina `SIMULACION_RANSOMWARE.txt` y reporta el número de archivos restaurados. Por ejemplo:
+## Qué demuestra
 
 ```text
-documento1.txt       -> SIMULAR -> documento1.txt.simulado
-documento1.txt.simulado -> RECUPERAR -> documento1.txt
+PC2/PC3 -> /registro -> PC1
+PC1 controlador -> /ordenar {CIFRAR_DEMO|RECUPERAR_DEMO} -> cola
+PC2/PC3 -> /poll -> cifrado/descifrado Fernet local -> /resultado -> PC1
 ```
 
-La recuperación es una reversión de nombres, no un descifrado. Por eso solo revierte esta simulación controlada y no recuperaría archivos cifrados por un ransomware real.
+El servidor nunca recibe shell, PowerShell, código Python ni una ruta de archivos. Solo admite dos literales: `CIFRAR_DEMO` y `RECUPERAR_DEMO`.
 
-### Qué no hace
+## Qué cifra
 
-- No ejecuta comandos recibidos desde la red.
-- No ejecuta shell, PowerShell ni código Python remoto.
-- No cifra, elimina, comprime ni exfiltra archivos.
-- No se propaga ni establece persistencia.
-- No modifica archivos fuera de la carpeta de laboratorio.
-- No sustituye una solución de respuesta a incidentes ni una copia de seguridad.
+El agente crea o usa exactamente estos tres archivos ficticios:
 
-## Qué contiene
+- `DEMO_LAB_documento1.txt`
+- `DEMO_LAB_documento2.txt`
+- `DEMO_LAB_reporte.txt`
 
-- `src/lab_sim/server.py`: servidor Flask con registro, polling, cola de órdenes y estado.
-- `src/lab_sim/agent_operations.py`: operaciones locales seguras de simulación y recuperación.
-- `tests/`: pruebas del contrato HTTP y de las operaciones sobre archivos temporales.
-- `docs/architecture.md`: arquitectura, límites y decisiones de seguridad.
-- `docs/runbook.md`: ejecución paso a paso y pruebas manuales.
-- `docs/architecture.md`: explicación detallada del flujo HTTP y los estados.
-- `Guia_Laboratorio v3.pdf`: material original de referencia.
+`CIFRAR_DEMO` usa Fernet de la biblioteca `cryptography`, escribe los bytes cifrados como `.enc` y elimina el TXT original. La clave se genera y permanece en `C:\LAB_RANSOMWARE\demo.key`; nunca se envía al servidor.
 
-## Requisitos
+`RECUPERAR_DEMO` usa esa misma clave, descifra los tres `.enc`, recrea los TXT originales y elimina los `.enc`. Si `demo.key` fue sustituida, la operación falla sin dejar un TXT descifrado parcial.
 
-- Python 3.11 o posterior.
-- Entorno virtual recomendado.
+## Límites deliberados
+
+- Lista cerrada de tres nombres, sin búsqueda recursiva.
+- Solo directorio fijo `C:\LAB_RANSOMWARE\Datos`.
+- Sin propagación, persistencia, explotación o robo de credenciales.
+- Sin ejecución arbitraria remota.
+- Sin cifrado de unidades completas, perfiles, recursos compartidos o documentos reales.
+- La red debe ser Host-Only/interna; nunca expongas el servidor a Internet.
+
+## Estructura
+
+- `servidor/servidor_lab.py`: servidor HTTP de PC1.
+- `servidor/Controlador.py`: consola de PC1.
+- `agente/agente_lab.py`: agente de PC2/PC3.
+- `src/lab_v4/crypto_demo.py`: Fernet, tres nombres permitidos y recuperación.
+- `src/lab_v4/server.py`: API, allowlist, cola y telemetría.
+- `src/lab_v4/agent.py`: registro, polling y ejecución local.
+- `tests/`: pruebas criptográficas, de agente y API.
+- `docs/`: arquitectura, runbook y seguridad.
+
+## Desarrollo local
 
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 py -m pip install -r requirements-dev.txt
 py -m pip install -e .
-```
-
-## Pruebas
-
-```powershell
 py -m pytest -q
 ```
 
-Las pruebas usan `tmp_path` y el cliente de pruebas de Flask: no necesitan red, máquinas virtuales ni archivos reales del usuario.
+La suite prueba el round-trip de cifrado/recuperación, la clave incorrecta, el aislamiento de nombres y el contrato HTTP sin conectarse a una red real.
 
-## Ejecutar el servidor local
+## Ejecución de la demo
 
-```powershell
-$env:LAB_DATA_DIR = "$PWD\.lab-data"
-py -m lab_sim.server
-```
-
-El servidor escucha en `127.0.0.1:5000` por defecto. Para ver el estado:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:5000/estado
-```
-
-Para registrar una víctima de laboratorio y poner una orden en cola:
-
-```powershell
-$body = @{ id = 'LAB-A1B2C3'; hostname = 'victima-demo' } | ConvertTo-Json
-Invoke-RestMethod http://127.0.0.1:5000/registro -Method Post -ContentType 'application/json' -Body $body
-
-$body = @{ id = 'LAB-A1B2C3'; comando = 'SIMULAR' } | ConvertTo-Json
-Invoke-RestMethod http://127.0.0.1:5000/ordenar -Method Post -ContentType 'application/json' -Body $body
-```
-
-## Uso responsable
-
-Ejecuta el laboratorio únicamente en una VM aislada o en una carpeta temporal con archivos ficticios. No lo apuntes a Documentos, Escritorio, perfiles, unidades de red ni datos institucionales. Consulta [docs/runbook.md](docs/runbook.md) antes de usarlo.
+Consulta [docs/runbook.md](docs/runbook.md) para la configuración de las tres VMs, firewall privado, servidor, controlador, agentes y PyInstaller. Las decisiones técnicas y los límites están en [docs/architecture.md](docs/architecture.md) y [docs/security.md](docs/security.md).

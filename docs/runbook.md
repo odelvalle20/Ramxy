@@ -1,61 +1,97 @@
-# Runbook de demostración
+# Runbook V4
 
-## 1. Preparar el entorno
+## 1. Preparar la red
+
+Crea tres VMs o equipos autorizados en una red Host-Only/interna. No uses carpetas compartidas con datos reales y no publiques el puerto 5000 en Internet.
+
+- PC1: servidor y controlador.
+- PC2: agente.
+- PC3: agente.
+
+En PC1 confirma la IP con `ipconfig`. Si no es `192.168.100.10`, pasa la URL correcta con `--server`.
+
+## 2. Instalar dependencias
+
+En PC1:
 
 ```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-py -m pip install -r requirements-dev.txt
-py -m pip install -e .
+py -m pip install flask requests cryptography
 ```
 
-## 2. Ejecutar las pruebas
+En PC2 y PC3:
 
 ```powershell
+py -m pip install requests cryptography
+```
+
+Para desarrollo y pruebas locales:
+
+```powershell
+py -m pip install -r requirements-dev.txt
+py -m pip install -e .
 py -m pytest -q
 ```
 
-Resultado esperado: todas las pruebas pasan y no se modifica ningún archivo fuera de los directorios temporales creados por pytest.
+## 3. Iniciar PC1
 
-## 3. Probar el flujo HTTP
-
-En una terminal:
+Desde la raíz del repo:
 
 ```powershell
-$env:LAB_DATA_DIR = "$PWD\.lab-data"
-py -m lab_sim.server
+$env:LAB_DB = 'C:\LAB_RANSOMWARE\Servidor\victimas.json'
+py servidor\servidor_lab.py
 ```
 
-En otra terminal:
+El servidor escucha en `0.0.0.0:5000`. En una red privada, permite TCP 5000 únicamente en el perfil privado de Windows Firewall si hace falta.
+
+En otra consola de PC1:
 
 ```powershell
-$body = @{ id = 'LAB-A1B2C3'; hostname = 'victima-demo' } | ConvertTo-Json
-Invoke-RestMethod http://127.0.0.1:5000/registro -Method Post -ContentType 'application/json' -Body $body
-
-$body = @{ id = 'LAB-A1B2C3'; comando = 'SIMULAR' } | ConvertTo-Json
-Invoke-RestMethod http://127.0.0.1:5000/ordenar -Method Post -ContentType 'application/json' -Body $body
-Invoke-RestMethod http://127.0.0.1:5000/estado
+py servidor\Controlador.py --server http://192.168.100.10:5000
 ```
 
-## 4. Simular y recuperar
+## 4. Iniciar PC2 y PC3
 
-La orden de simulación no encripta el contenido. Para demostrar la operación local sobre archivos ficticios, crea una carpeta temporal y llama a las funciones:
+En cada VM, usa una base propia. El agente crea los tres TXT ficticios, `registro_victima.json` y `demo.key`.
+
+PC2:
 
 ```powershell
-@("documento1.txt", "documento2.txt") | ForEach-Object { New-Item -ItemType File -Path ".lab-data\Datos\$_" -Force }
-py -c "from pathlib import Path; from lab_sim.agent_operations import simulate, recover; p=Path('.lab-data/Datos'); print(simulate(p)); print(recover(p))"
+py agente\agente_lab.py --server http://192.168.100.10:5000 --base C:\LAB_RANSOMWARE
 ```
 
-El resultado esperado es `SIMULACION_COMPLETADA: 2 archivos` seguido de `RECUPERACION_COMPLETADA: 2 archivos`. Durante la simulación los nombres terminan en `.simulado`; el contenido no se cifra ni se elimina. La recuperación quita ese sufijo y borra el marcador `SIMULACION_RANSOMWARE.txt`.
+PC3 debe usar su propia carpeta local y puede iniciar con el mismo comando. No copies `demo.key` entre víctimas: cada agente tiene su propia clave.
 
-## 5. Pruebas de fallo
+Para una prueba de una sola consulta, útil durante desarrollo:
 
-- Registrar un ID que no siga `LAB-XXXXXX`: debe responder `400`.
-- Ordenar `SHELL`, `EXEC` u otra operación: debe responder `400`.
-- Ordenar una víctima no registrada: debe responder `404`.
-- Detener el servidor: un agente real debe seguir intentando, sin cambiar archivos.
-- Reiniciar el servidor y repetir el registro: debe aparecer nuevamente en `/estado`.
+```powershell
+py agente\agente_lab.py --server http://127.0.0.1:5000 --base .lab-data --once
+```
 
-## 6. Evidencia recomendada
+## 5. Demostración
 
-Conserva una captura de la salida de `py -m pytest -q` y otra de `/estado` después de registrar una víctima. No incluyas datos reales: usa únicamente nombres ficticios y directorios temporales.
+1. En el controlador selecciona `1` y verifica PC2/PC3 en estado `CONECTADO`.
+2. Abre los tres TXT ficticios y confirma que contienen texto de laboratorio.
+3. Selecciona `2`, introduce un ID y envía `CIFRAR_DEMO`.
+4. Espera el siguiente polling y comprueba los tres archivos `.enc`.
+5. Consulta el estado: debe mostrar `CIFRADO_DEMO_COMPLETADO`.
+6. Selecciona `3`, introduce el mismo ID y envía `RECUPERAR_DEMO`.
+7. Comprueba que reaparecen los TXT y desaparecen los `.enc`.
+
+## 6. Generar el EXE opcional
+
+En una máquina de preparación con Python:
+
+```powershell
+py -m pip install requests cryptography pyinstaller
+pyinstaller --onefile --noconsole agente\agente_lab.py
+```
+
+Prueba primero el `.py`. Copia manualmente el EXE a las VMs autorizadas. No se incorpora persistencia automática.
+
+## 7. Fallos esperados
+
+- Comando `POWERSHELL`, `SHELL` o cualquier otro: HTTP `400`, `Comando no permitido`.
+- ID no registrado: HTTP `404`.
+- Servidor apagado: el agente continúa intentando sin modificar archivos.
+- Clave `demo.key` sustituida: recuperación falla con error de token y no crea un TXT plano parcial.
+- Archivo fuera de los tres nombres permitidos: permanece intacto.

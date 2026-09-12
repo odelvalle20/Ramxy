@@ -3,11 +3,14 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lab-sim"
-version = "0.1.0"
-description = "Simulacion local y controlada de tasking remoto"
+name = "lab-ransomware-v4-demo"
+version = "1.0.0"
+description = "Demo criptografica remota confinada a tres archivos ficticios"
 requires-python = ">=3.11"
-dependencies = ["Flask>=3.0,<4", "requests>=2.31,<3"]
+dependencies = ["Flask>=3.0,<4", "requests>=2.31,<3", "cryptography>=42,<47"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

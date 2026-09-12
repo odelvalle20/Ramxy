@@ -3,6 +3,9 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 *.egg-info/
+*.key
 .lab-data/
-*.zip
-Guia_Laboratorio v3.pdf
+victimas.json
+dist/
+build/
+*.spec

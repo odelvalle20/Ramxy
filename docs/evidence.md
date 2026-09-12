@@ -1,17 +1,30 @@
-# Evidencia de validación
+# Evidencia
 
-Esta página se completa con la salida y capturas generadas durante la ejecución local.
+## Validación automatizada
 
-## Pruebas automatizadas
-
-Comando:
+Ejecutar:
 
 ```text
 py -m pytest -q
 ```
 
-Resultado esperado: 4 pruebas aprobadas.
+La suite valida:
 
-## Flujo de registro y tasking
+- cifrado Fernet de exactamente tres nombres;
+- recuperación byte a byte;
+- aislamiento de archivos fuera de la allowlist;
+- fallo seguro con clave equivocada;
+- registro, cola, polling, resultado y rechazo de comandos arbitrarios;
+- ejecución local del agente aunque el reporte HTTP no esté disponible.
 
-La evidencia debe mostrar una víctima ficticia `LAB-A1B2C3`, el estado `CONECTADO` y un resultado de simulación. La captura debe ocultar cualquier ruta o dato que no pertenezca al laboratorio.
+## Evidencia manual
+
+Captura estos estados en una red privada con archivos ficticios:
+
+1. PC2 y PC3 visibles como `CONECTADO`.
+2. Los tres TXT antes de `CIFRAR_DEMO`.
+3. Los tres `.enc` después del polling.
+4. Estado `CIFRADO_DEMO_COMPLETADO`.
+5. Los TXT restaurados después de `RECUPERAR_DEMO`.
+
+No incluyas claves, datos personales ni rutas de usuario en las capturas.
