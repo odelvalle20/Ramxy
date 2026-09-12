@@ -9,3 +9,5 @@ victimas.json
 dist/
 build/
 *.spec
+.evidence-lab/
+.evidence-state.json

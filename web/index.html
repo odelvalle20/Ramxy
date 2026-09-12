@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LAB V5 | Panel</title>
+<style>
+:root{--ink:#172126;--muted:#5e6c70;--line:#d4dfdf;--paper:#f3f6f3;--teal:#146c68;--orange:#c96732;--white:#fff}*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#edf5f2,#f7efe7);color:var(--ink);font:16px Georgia,serif}main{max-width:1080px;margin:0 auto;padding:42px 22px}header{display:flex;justify-content:space-between;gap:24px;align-items:end;border-bottom:2px solid var(--ink);padding-bottom:22px}h1{font-size:clamp(2rem,5vw,4.5rem);line-height:.95;margin:0;max-width:650px}header p{max-width:280px;color:var(--muted);margin:0}.grid{display:grid;grid-template-columns:1fr 1.4fr;gap:18px;margin-top:24px}.panel{background:var(--white);border:1px solid var(--line);padding:20px;box-shadow:5px 5px 0 #d9e5de}.panel h2{margin:0 0 15px;font-size:1.25rem}.controls{display:flex;flex-wrap:wrap;gap:9px}input,select,button{font:inherit;border:1px solid var(--line);padding:11px 12px;background:white}input{width:100%}button{cursor:pointer;background:var(--teal);color:white;border-color:var(--teal)}button.secondary{background:var(--orange);border-color:var(--orange)}pre{background:#172126;color:#dff7e8;padding:14px;min-height:120px;overflow:auto;font:13px Consolas,monospace}.status{color:var(--muted);min-height:24px}@media(max-width:720px){header{display:block}header p{margin-top:15px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<header><div><p>LABORATORIO V5 / CONTROL REMOTO</p><h1>Cifrado reversible, bajo control.</h1></div><p>Panel local para agentes ficticios. Los originales se conservan.</p></header>
+<div class="grid">
+<section class="panel"><h2>Autenticación</h2><input id="token" type="password" placeholder="LAB_ADMIN_TOKEN"><button onclick="loadData()">Conectar</button><p id="status" class="status"></p></section>
+<section class="panel"><h2>Ordenar operación</h2><select id="agent"><option value="">Selecciona un agente</option></select><div class="controls"><button onclick="order('SIMULAR')">Simular</button><button class="secondary" onclick="order('CIFRAR_COPIAS')">Cifrar copias</button><button onclick="order('RECUPERAR_COPIAS')">Recuperar copias</button></div></section>
+<section class="panel"><h2>Agentes</h2><pre id="agents">Introduce el token para cargar.</pre></section>
+<section class="panel"><h2>Historial de órdenes</h2><pre id="orders">Introduce el token para cargar.</pre></section>
+</div>
+</main>
+<script>
+let token='';
+async function api(url,options={}){options.headers={...(options.headers||{}),'X-LAB-TOKEN':token,'Content-Type':'application/json'};const response=await fetch(url,options);return response.json()}
+async function loadData(){token=document.getElementById('token').value;const agents=await api('/api/agentes');document.getElementById('agents').textContent=JSON.stringify(agents,null,2);const select=document.getElementById('agent');select.innerHTML='<option value="">Selecciona un agente</option>';(Array.isArray(agents)?agents:[]).forEach(item=>{const option=document.createElement('option');option.value=item.id;option.textContent=item.id+' / '+item.equipo;select.appendChild(option)});const orders=await api('/api/ordenes');document.getElementById('orders').textContent=JSON.stringify(orders,null,2);document.getElementById('status').textContent=agents.error||'Panel conectado';}
+async function order(command){const agent=document.getElementById('agent').value;if(!agent){document.getElementById('status').textContent='Selecciona un agente';return}const result=await api('/api/ordenes',{method:'POST',body:JSON.stringify({agente:agent,comando:command})});document.getElementById('status').textContent=JSON.stringify(result);await loadData()}
+</script>
+</body>
+</html>
