@@ -2,6 +2,7 @@
 __pycache__/
 .pytest_cache/
 *.py[cod]
+*.egg-info/
 .lab-data/
 *.zip
 Guia_Laboratorio v3.pdf
